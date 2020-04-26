@@ -32,11 +32,10 @@ type Inbound struct {
 }
 
 type InboundFields struct {
-	Number           string `json:"Phone number"`
-	Recording        string `json:"Recording"`
-	Transcription    string `json:"Transcription"`
-	TranscriptionURL string `json:"Transcription URL"`
-	TwilioID         string `json:"Twilio ID"`
+	Number        string `json:"Phone number"`
+	Recording     string `json:"Recording"`
+	Transcription string `json:"Transcription"`
+	TwilioID      string `json:"Twilio ID"`
 }
 
 func CallHandler(w http.ResponseWriter, r *http.Request) {
@@ -118,11 +117,10 @@ func TranscriptionHandler(w http.ResponseWriter, r *http.Request) {
 
 	entry := Inbound{
 		Fields: InboundFields{
-			TwilioID:         transcription.CallSid,
-			Number:           transcription.From,
-			Recording:        transcription.RecordingURL + ".mp3",
-			Transcription:    transcription.TranscriptionText,
-			TranscriptionURL: transcription.TranscriptionURL,
+			TwilioID:      transcription.CallSid,
+			Number:        transcription.From,
+			Recording:     transcription.RecordingURL + ".mp3",
+			Transcription: transcription.TranscriptionText,
 		},
 	}
 
