@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
@@ -30,6 +31,25 @@ When the delivery is complete, please respond to the original thread in <#C010M2
 If you run into any challenges along the way (someone’s not answering their phone, they have more complex needs than you’re able to address), post to @intake (in the request thread or <#C010M24QT4G>) and we’ll follow up.`
 
 func BasicsCommand(w http.ResponseWriter, r *http.Request) {
+	if signingSecret, ok := os.LookupEnv("SLACK_SIGNING_SECRET"); ok {
+		verifier, err := slack.NewSecretsVerifier(r.Header, signingSecret)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			log.Printf("error creating slack secret verifier %v", err)
+
+			return
+		}
+
+		if err := verifier.Ensure(); err != nil {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			log.Printf("error verifying slack request %v", err)
+
+			return
+		}
+	} else {
+		log.Println("not validating incoming slack request because SLACK_SIGNING_SECRET is not set")
+	}
+
 	basics, err := slack.SlashCommandParse(r)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
