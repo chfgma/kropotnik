@@ -1,8 +1,11 @@
 package slack
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -39,6 +42,18 @@ func BasicsCommand(w http.ResponseWriter, r *http.Request) {
 
 			return
 		}
+
+		var buf bytes.Buffer
+
+		tee := io.TeeReader(r.Body, &buf)
+		if _, err := io.Copy(&verifier, tee); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			log.Printf("error copying body to secret verifier %v", err)
+
+			return
+		}
+
+		r.Body = ioutil.NopCloser(&buf)
 
 		if err := verifier.Ensure(); err != nil {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
