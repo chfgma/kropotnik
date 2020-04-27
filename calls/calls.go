@@ -24,6 +24,9 @@ type InboundFields struct {
 	TwilioID      string `json:"Twilio ID"`
 }
 
+/*
+* TODO: verify requests are really from Twilio (https://godoc.org/github.com/kevinburke/twilio-go#GetExpectedTwilioSignature)
+ */
 func CallHandler(w http.ResponseWriter, r *http.Request) {
 	var vr twiml.VoiceRequest
 	if err := twiml.Bind(&vr, r); err != nil {
