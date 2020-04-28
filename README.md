@@ -26,7 +26,7 @@ go run main.go
 Run through Docker:
 ```
 docker build --tag kropotnik:dev .
-docker run --rm --envfile=/tmp/kropotkin.env -p 127.0.0.1:8080:8080 kropotnik:dev
+docker run --rm --env-file=/tmp/kropotnik.env -p 127.0.0.1:8080:8080 kropotnik:dev
 ```
 
 The `-p 8080:8080` will map 8080 from inside of the container to your localhost:8080.
