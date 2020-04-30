@@ -5,3 +5,6 @@ docker-build:
 .PHONY: docker-build
 docker-push: docker-build
 	docker push gcr.io/chfgma/kropotnik:latest
+
+run:
+	go run main.go
