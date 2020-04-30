@@ -12,6 +12,11 @@ import (
 	"github.com/brianloveswords/airtable"
 )
 
+const (
+	inboundTable = "inbound"
+	greeting     = "Thank you for calling the Myrtle Avenue Brooklyn Partnership hotline. After the tone please tell us why you are calling and someone will call you back soon. You can hang up when you are done."
+)
+
 type Inbound struct {
 	airtable.Record
 	Fields InboundFields
@@ -34,9 +39,11 @@ func CallHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Incoming call from %s", vr.From)
+
 	response := twiml.NewResponse()
 	response.Add(&twiml.Say{
-		Text: "Hello from Clinton Hill Fort Greene Mutual Aid. Please tell us why you are calling.",
+		Text: greeting,
 	})
 
 	response.Add(&twiml.Record{
@@ -57,7 +64,18 @@ func CallHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/xml")
 
-	log.Printf("Incoming call from %s", vr.From)
+	inbound := NewClient().Table(inboundTable)
+	if err := inbound.Create(&Inbound{
+		Fields: InboundFields{
+			TwilioID: vr.CallSid,
+			Number:   vr.From,
+		},
+	}); err != nil {
+		log.Printf("erroring creating inbound %v", err)
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+
+		return
+	}
 }
 
 func RecordingHandler(w http.ResponseWriter, r *http.Request) {
@@ -69,11 +87,9 @@ func RecordingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	airtableClient := airtable.Client{
-		APIKey: os.Getenv("AIRTABLE_API_KEY"),
-		BaseID: os.Getenv("AIRTABLE_BASE_ID"),
-	}
-	inbound := airtableClient.Table("inbound")
+	log.Printf("Received recording from %s", recording.From)
+
+	inbound := NewClient().Table("inbound")
 
 	if err := inbound.Create(&Inbound{
 		Fields: InboundFields{
@@ -98,11 +114,9 @@ func TranscriptionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	airtableClient := airtable.Client{
-		APIKey: os.Getenv("AIRTABLE_API_KEY"),
-		BaseID: os.Getenv("AIRTABLE_BASE_ID"),
-	}
-	inbound := airtableClient.Table("inbound")
+	log.Printf("Received transcription from %s", transcription.From)
+
+	inbound := NewClient().Table("inbound")
 
 	entry := Inbound{
 		Fields: InboundFields{
@@ -154,5 +168,12 @@ func TranscriptionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 
 		return
+	}
+}
+
+func NewClient() *airtable.Client {
+	return &airtable.Client{
+		APIKey: os.Getenv("AIRTABLE_API_KEY"),
+		BaseID: os.Getenv("AIRTABLE_BASE_ID"),
 	}
 }
