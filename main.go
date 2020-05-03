@@ -16,6 +16,11 @@ func main() {
 	http.HandleFunc("/transcription", calls.TranscriptionHandler)
 	http.HandleFunc("/basics", slack.BasicsCommand)
 
+	http.HandleFunc("/forward", calls.CallForward)
+	http.HandleFunc("/forward_verify", calls.CallForwardVerify)
+	http.HandleFunc("/forward_complete", calls.CallForwardComplete)
+	http.HandleFunc("/forward_error", calls.CallForwardError)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
