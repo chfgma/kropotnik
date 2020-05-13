@@ -10,6 +10,7 @@ import (
 	"github.com/BTBurke/twiml"
 	"github.com/avast/retry-go"
 	"github.com/brianloveswords/airtable"
+	"k8s.io/klog/klogr"
 )
 
 const (
@@ -33,15 +34,18 @@ type InboundFields struct {
 * TODO: verify requests are really from Twilio (https://godoc.org/github.com/kevinburke/twilio-go#GetExpectedTwilioSignature)
  */
 func CallHandler(w http.ResponseWriter, r *http.Request) {
+	log := klogr.New()
+
 	var vr twiml.VoiceRequest
 	if err := twiml.Bind(&vr, r); err != nil {
-		log.Printf("error decoding request %v", err)
+		log.Error(err, "error decoding request")
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 
 		return
 	}
 
-	log.Printf("Incoming call from %s", vr.From)
+	log = log.WithValues("from", vr.From, "callSid", vr.CallSid)
+	log.Info("Incoming call")
 
 	response := twiml.NewResponse()
 	response.Add(&twiml.Play{
@@ -56,14 +60,14 @@ func CallHandler(w http.ResponseWriter, r *http.Request) {
 
 	b, err := response.Encode()
 	if err != nil {
-		log.Printf("error encoding body %v", err)
+		log.Error(err, "error encoding body")
 		http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 
 		return
 	}
 
 	if _, err := w.Write(b); err != nil {
-		log.Printf("error writing response %v", err)
+		log.Error(err, "error writing response")
 		http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 
 		return
@@ -78,7 +82,7 @@ func CallHandler(w http.ResponseWriter, r *http.Request) {
 			Number:   vr.From,
 		},
 	}); err != nil {
-		log.Printf("erroring creating inbound %v", err)
+		log.Error(err, "erroring creating inbound")
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 
 		return
@@ -86,44 +90,48 @@ func CallHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func RecordingHandler(w http.ResponseWriter, r *http.Request) {
+	log := klogr.New()
+
 	var recording twiml.RecordActionRequest
 	if err := twiml.Bind(&recording, r); err != nil {
-		log.Printf("erroring receiving recording %v", err)
+		log.Error(err, "erroring receiving recording")
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 
 		return
 	}
 
-	log.Printf("Received recording from %s", recording.From)
+	log = log.WithValues("from", recording.From, "callSid", recording.CallSid)
+	log.Info("Received recording", "url", recording.RecordingURL)
 
-	inbound := NewClient().Table("inbound")
-
-	if err := inbound.Create(&Inbound{
+	record := &Inbound{
 		Fields: InboundFields{
 			TwilioID:  recording.CallSid,
 			Number:    recording.From,
 			Recording: recording.RecordingURL + ".mp3",
 		},
-	}); err != nil {
-		log.Printf("erroring creating inbound %v", err)
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-
-		return
 	}
+
+	if err := createOrUpdate(recording.CallSid, record); err != nil {
+		log.Error(err, "erroring creating inbound")
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func TranscriptionHandler(w http.ResponseWriter, r *http.Request) {
+	log := klogr.New()
+
 	var transcription twiml.TranscribeCallbackRequest
 	if err := twiml.Bind(&transcription, r); err != nil {
-		log.Printf("erroring receiving transcription %v", err)
+		log.Error(err, "erroring receiving transcription")
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 
 		return
 	}
 
-	log.Printf("Received transcription from %s", transcription.From)
-
-	inbound := NewClient().Table("inbound")
+	log = log.WithValues("from", transcription.From, "callSid", transcription.CallSid)
+	log.Info("Received transcription", "transcription", transcription.TranscriptionText)
 
 	entry := Inbound{
 		Fields: InboundFields{
@@ -134,12 +142,29 @@ func TranscriptionHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
+	if err := createOrUpdate(transcription.CallSid, &entry); err != nil {
+		log.Error(err, "erroring creating inbound")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func NewClient() *airtable.Client {
+	return &airtable.Client{
+		APIKey: os.Getenv("AIRTABLE_API_KEY"),
+		BaseID: os.Getenv("AIRTABLE_BASE_ID"),
+	}
+}
+
+func createOrUpdate(callSid string, record *Inbound) error {
+	inbound := NewClient().Table("inbound")
 	var inbounds []Inbound
 
-	if err := retry.Do(
+	err := retry.Do(
 		func() error {
 			if err := inbound.List(&inbounds, &airtable.Options{
-				Filter:     fmt.Sprintf(`{Twilio ID} = %q`, transcription.CallSid),
+				Filter:     fmt.Sprintf(`{Twilio ID} = %q`, callSid),
 				MaxRecords: 1,
 			}); err != nil {
 				log.Println("retrying")
@@ -151,36 +176,25 @@ func TranscriptionHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return nil
 		},
-	); err != nil {
-		log.Printf("error listing inbound records %v for SID %q", err, transcription.CallSid)
+	)
+	if err != nil {
+		log.Printf("error listing inbound records %v for SID %q", err, callSid)
 	}
 
 	if len(inbounds) == 0 {
-		log.Printf("could not preexisting entry for for SID %q", transcription.CallSid)
+		log.Printf("could not preexisting entry for for SID %q", callSid)
 
-		if err := inbound.Create(&entry); err != nil {
-			log.Printf("erroring creating inbound %v", err)
-			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
-
-			return
+		if err := inbound.Create(record); err != nil {
+			return err
 		}
 
-		return
+		return nil
 	}
 
-	entry.ID = inbounds[0].ID
+	record.ID = inbounds[0].ID
 
-	if err := inbound.Update(&entry); err != nil {
-		log.Printf("erroring creating inbound %v", err)
-		http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
-
-		return
+	if err := inbound.Update(record); err != nil {
+		return err
 	}
-}
-
-func NewClient() *airtable.Client {
-	return &airtable.Client{
-		APIKey: os.Getenv("AIRTABLE_API_KEY"),
-		BaseID: os.Getenv("AIRTABLE_BASE_ID"),
-	}
+	return nil
 }
