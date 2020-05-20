@@ -116,7 +116,25 @@ func RecordingHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	response := twiml.NewResponse()
+	response.Add(&twiml.Hangup{})
+
+	b, err := response.Encode()
+	if err != nil {
+		log.Error(err, "error encoding body")
+		http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
+
+		return
+	}
+
+	if _, err := w.Write(b); err != nil {
+		log.Error(err, "error writing response")
+		http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/xml")
 }
 
 func TranscriptionHandler(w http.ResponseWriter, r *http.Request) {
@@ -147,7 +165,25 @@ func TranscriptionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	response := twiml.NewResponse()
+	response.Add(&twiml.Hangup{})
+
+	b, err := response.Encode()
+	if err != nil {
+		log.Error(err, "error encoding body")
+		http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
+
+		return
+	}
+
+	if _, err := w.Write(b); err != nil {
+		log.Error(err, "error writing response")
+		http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/xml")
 }
 
 func NewClient() *airtable.Client {
