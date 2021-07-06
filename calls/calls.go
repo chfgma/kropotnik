@@ -15,7 +15,7 @@ import (
 
 const (
 	inboundTable = "inbound"
-	greeting     = "https://storage.googleapis.com/artifacts.chfgma.appspot.com/assets/twilio_voicemail_chad.mp3"
+	greeting     = "https://storage.googleapis.com/artifacts.chfgma.appspot.com/assets/chad3.wav"
 )
 
 type Inbound struct {
