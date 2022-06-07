@@ -1,10 +1,8 @@
-.PHONY: docker-build
-docker-build:
-	docker build . --tag gcr.io/chfgma/kropotnik:latest
+export KO_DOCKER_REPO := gcr.io/chfgma
 
-.PHONY: docker-build
-docker-push: docker-build
-	docker push gcr.io/chfgma/kropotnik:latest
+.PHONY: push
+push:
+	ko build -B .
 
 run:
 	go run main.go
