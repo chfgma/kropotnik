@@ -7,14 +7,12 @@ import (
 	"os"
 
 	"github.com/chfgma/kropotnik/calls"
-	"github.com/chfgma/kropotnik/slack"
 )
 
 func main() {
 	http.HandleFunc("/call", calls.CallHandler)
 	http.HandleFunc("/record", calls.RecordingHandler)
 	http.HandleFunc("/transcription", calls.TranscriptionHandler)
-	http.HandleFunc("/basics", slack.BasicsCommand)
 
 	port := os.Getenv("PORT")
 	if port == "" {
