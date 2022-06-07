@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/BTBurke/twiml"
-	"github.com/avast/retry-go"
+	"github.com/avast/retry-go/v4"
 	"github.com/brianloveswords/airtable"
 	"k8s.io/klog/klogr"
 )
