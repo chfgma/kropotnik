@@ -1,7 +1,7 @@
 github.com/BTBurke/twiml v1.1.1 h1:qYUtgjZ+m30Hp0/6lCPdqagKZehAwf6KJn9Hw40aiRY=
 github.com/BTBurke/twiml v1.1.1/go.mod h1:hYZmdr3Cb+0CukV8NXtgvAo7NKLyLzpB+Yrx52LwMCQ=
-github.com/avast/retry-go v2.6.0+incompatible h1:FelcMrm7Bxacr1/RM8+/eqkDkmVN7tjlsy51dOzB3LI=
-github.com/avast/retry-go v2.6.0+incompatible/go.mod h1:XtSnn+n/sHqQIpZ10K1qAevBhOOCWBLXXy3hyiqqBrY=
+github.com/avast/retry-go v3.0.0+incompatible h1:4SOWQ7Qs+oroOTQOYnAHqelpCO0biHSxpiH9JdtuBj0=
+github.com/avast/retry-go v3.0.0+incompatible/go.mod h1:XtSnn+n/sHqQIpZ10K1qAevBhOOCWBLXXy3hyiqqBrY=
 github.com/brianloveswords/airtable v0.0.0-20200303135952-d5e6b4516c7b h1:93YLHhodU7P+5QdswIWDPz7xIYglzZU8LIbX7/SFkrg=
 github.com/brianloveswords/airtable v0.0.0-20200303135952-d5e6b4516c7b/go.mod h1:nwbEOwACogJJxLEo0a4lnyieg8EKfq3uIzuZeEHMPI0=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
